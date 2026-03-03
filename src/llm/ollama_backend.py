@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import queue as _queue
+import random
 import threading
 import time
 from typing import Callable, Optional
@@ -95,6 +96,9 @@ class OllamaBackend(BaseLLMBackend):
 
         # Override temperature via options
         opts["temperature"] = temperature
+        # Always use a fresh random seed so successive calls never produce
+        # identical outputs even at the same temperature.
+        opts["seed"] = random.randint(0, 2**31 - 1)
 
         payload: dict = {
             "model": self.model,
