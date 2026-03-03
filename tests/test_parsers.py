@@ -47,8 +47,8 @@ def test_fallback_parser_with_docx():
     # Create a minimal docx
     doc = Document()
     doc.add_paragraph("测试产品")
-    doc.add_paragraph("这是一个非常好的汽车，性能出色，驾驶体验极佳。")
-    doc.add_paragraph("续航里程超过500公里，充电速度快。")
+    doc.add_paragraph("这是一个非常好的产品，性能出色，使用体验极佳。")
+    doc.add_paragraph("品质卓越，用户反馈非常正面。")
 
     with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
         doc.save(tmp.name)
@@ -77,17 +77,17 @@ def test_llm_parser_json_extraction():
     from src.parsers.llm_parser import _extract_json, _extract_json_array
 
     # Plain object
-    raw_obj = '{"product_name":"车X","positive_ratio":0.6,"general_rules":["规则1"]}'
+    raw_obj = '{"product_name":"产品X","positive_ratio":0.6,"general_rules":["规则1"]}'
     data = _extract_json(raw_obj)
-    assert data["product_name"] == "车X"
+    assert data["product_name"] == "产品X"
     assert data["positive_ratio"] == pytest.approx(0.6)
 
     # Object wrapped in markdown fences
     raw_fenced = '```json\n' + raw_obj + '\n```'
-    assert _extract_json(raw_fenced)["product_name"] == "车X"
+    assert _extract_json(raw_fenced)["product_name"] == "产品X"
 
     # Plain array
-    raw_arr = '[{"direction":"正向","theme":"续航","sub_themes":[],"description":"","personas":["车主"],"example_comments":["很好"]}]'
+    raw_arr = '[{"direction":"正向","theme":"使用体验","sub_themes":[],"description":"","personas":["真实用户"],"example_comments":["很好"]}]'
     arr = _extract_json_array(raw_arr)
     assert len(arr) == 1
     assert arr[0]["direction"] == "正向"
@@ -108,16 +108,16 @@ def test_llm_parser_with_mock_client():
 
     payload = {
         "title": "测试Brief",
-        "product_name": "测试车型",
-        "product_background": "一款优秀的电动汽车",
+        "product_name": "测试产品",
+        "product_background": "一款优秀的测试产品",
         "general_rules": ["自然口语化"],
         "forbidden_phrases": ["最优惠"],
         "positive_ratio": 0.5,
         "min_char_length": 20,
         "platform_targets": ["微博"],
         "categories": [
-            {"direction": "正向", "theme": "续航", "sub_themes": [], "description": "续航好",
-             "personas": ["普通车主"], "example_comments": ["续航超强"]}
+            {"direction": "正向", "theme": "使用体验", "sub_themes": [], "description": "体验好",
+             "personas": ["真实用户"], "example_comments": ["体验超好"]}
         ],
     }
     mock_backend = MagicMock()
@@ -129,8 +129,8 @@ def test_llm_parser_with_mock_client():
     client = LLMClient(mock_backend, max_concurrency=1)
 
     doc = Document()
-    doc.add_paragraph("测试车型评论brief")
-    doc.add_paragraph("正向评论：续航表现非常出色")
+    doc.add_paragraph("测试产品评论brief")
+    doc.add_paragraph("正向评论：使用体验非常出色")
     with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
         doc.save(tmp.name)
         tmp_path = tmp.name
@@ -142,7 +142,7 @@ def test_llm_parser_with_mock_client():
     assert report.parser_name == "llm"
     assert report.confidence > 0.7
     assert report.spec is not None
-    assert report.spec.product_name == "测试车型"
+    assert report.spec.product_name == "测试产品"
     assert len(report.spec.categories) == 1
 
 

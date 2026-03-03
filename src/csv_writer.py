@@ -27,6 +27,7 @@ _AUDIT_COLUMNS = [
     "provider",
     "model",
     "prompt_version",
+    "industry",
     "validation_status",
     "errors",
 ]
@@ -44,6 +45,7 @@ def _build_rows(
     model: str,
     prompt_version: str,
     timestamp: str,
+    industry: str = "general",
 ) -> list[dict]:
     rows = []
     for i, c in enumerate(comments, start=1):
@@ -61,6 +63,7 @@ def _build_rows(
             "provider": provider,
             "model": model,
             "prompt_version": prompt_version,
+            "industry": industry,
             "validation_status": c.validation_status,
             "errors": "; ".join(c.errors),
         }
@@ -75,11 +78,12 @@ def write_csv(
     provider: str = "",
     model: str = "",
     prompt_version: str = "v1.0",
+    industry: str = "general",
 ) -> Path:
     """Write comments to CSV file. Returns the path."""
     run_id = run_id or str(uuid.uuid4())[:8]
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    rows = _build_rows(comments, run_id, provider, model, prompt_version, timestamp)
+    rows = _build_rows(comments, run_id, provider, model, prompt_version, timestamp, industry)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = _STANDARD_COLUMNS + _AUDIT_COLUMNS
@@ -98,11 +102,12 @@ def to_csv_bytes(
     provider: str = "",
     model: str = "",
     prompt_version: str = "v1.0",
+    industry: str = "general",
 ) -> bytes:
     """Return CSV content as bytes (UTF-8 BOM) for browser download."""
     run_id = run_id or str(uuid.uuid4())[:8]
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    rows = _build_rows(comments, run_id, provider, model, prompt_version, timestamp)
+    rows = _build_rows(comments, run_id, provider, model, prompt_version, timestamp, industry)
     fieldnames = _STANDARD_COLUMNS + _AUDIT_COLUMNS
 
     buf = io.StringIO()

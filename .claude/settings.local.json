@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(python:*)",
+      "Bash(dir E:\\\\WorkSpace\\\\The-Marionette\\\\assets:*)",
+      "Bash(pip install:*)",
+      "Bash(uv:*)"
+    ]
+  }
+}

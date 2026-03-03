@@ -25,6 +25,7 @@ class BriefSpec(BaseModel):
     negative_ratio: float = 0.5
     min_char_length: int = 20
     platform_targets: list[str] = Field(default_factory=list)
+    industry: str = "general"   # 行业预设 key，全链路唯一真值源
 
     @field_validator("positive_ratio", "negative_ratio", mode="before")
     @classmethod

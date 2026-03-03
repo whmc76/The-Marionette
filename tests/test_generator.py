@@ -19,14 +19,14 @@ def _make_spec(num_categories: int = 2) -> BriefSpec:
             theme=f"主题{i+1}",
             sub_themes=["子主题A", "子主题B"],
             description="测试描述",
-            personas=["普通车主", "科技爱好者"],
-            example_comments=["这辆车真的太棒了", "续航表现非常出色"],
+            personas=["真实用户", "科技爱好者"],
+            example_comments=["这个产品真的太棒了", "使用体验非常出色"],
         ))
 
     return BriefSpec(
         title="测试Brief",
-        product_name="测试汽车",
-        product_background="一款优秀的电动汽车",
+        product_name="测试产品",
+        product_background="一款优秀的测试产品",
         general_rules=["自然口语化", "贴近真实用户"],
         forbidden_phrases=["最优惠", "第一名"],
         categories=cats,

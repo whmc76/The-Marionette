@@ -13,6 +13,7 @@ st.set_page_config(
 )
 
 from src.models import BriefSpec, CommentCategory, GeneratedComment
+from src.presets import PRESETS, get_preset
 from src.config import config, LLMSettings
 from src.parsers import parse_brief
 from src.llm.client import build_client, GenerationAborted
@@ -75,6 +76,8 @@ def _init_state() -> None:
         "conn_verified": False, # whether test_connection() passed
         # settings page temp key storage (session-only, never persisted)
         "settings_api_key": "",
+        # industry selection
+        "industry": "general",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -469,6 +472,19 @@ def _settings_page() -> None:
 
 def _step1() -> None:
     st.header("Step 1 · 选择输入源")
+
+    # ── 行业选择器（两个分支共用）────────────────────────────────
+    _industry_keys = [p.key for p in PRESETS]
+    _default_idx = _industry_keys.index(st.session_state.industry) if st.session_state.industry in _industry_keys else _industry_keys.index("general")
+    selected_industry = st.selectbox(
+        "行业类型",
+        options=_industry_keys,
+        format_func=lambda k: f"{get_preset(k).icon} {get_preset(k).label}",
+        index=_default_idx,
+        key="industry_selector",
+    )
+    st.session_state.industry = selected_industry
+
     mode = st.radio("输入方式", ["📄 上传 DOCX Brief", "✏️ 手动输入"], horizontal=True)
 
     if mode == "📄 上传 DOCX Brief":
@@ -605,7 +621,8 @@ def _step1_docx() -> None:
 
             try:
                 llm_report = LLMParser(
-                    client, on_step=on_step, on_token=on_token
+                    client, on_step=on_step, on_token=on_token,
+                    industry=st.session_state.industry,
                 ).parse(tmp_path)
                 # Clear streaming boxes after completion; keep field summary
                 _think_ph.empty()
@@ -656,8 +673,9 @@ def _step1_docx() -> None:
 
 def _step1_manual() -> None:
     st.subheader("手动填写产品信息")
+    _preset = get_preset(st.session_state.industry)
     with st.form("manual_brief"):
-        product_name = st.text_input("产品名称 *", placeholder="如：岚图梦想家")
+        product_name = st.text_input("产品名称 *", placeholder=f"如：{_preset.product_examples[0]}")
         product_bg = st.text_area("产品背景（简介）", height=100)
         min_chars = st.number_input("评论最短字数", min_value=10, max_value=100, value=20)
         general_rules_raw = st.text_area(
@@ -694,6 +712,7 @@ def _step1_manual() -> None:
             negative_ratio=0.5,
             min_char_length=int(min_chars),
             platform_targets=[p.strip() for p in platforms_raw.split(",") if p.strip()],
+            industry=st.session_state.industry,
         )
         st.session_state.spec = spec
         st.session_state.parse_report = None
@@ -786,6 +805,7 @@ def _step2() -> None:
             negative_ratio=round(1.0 - pos_ratio, 2),
             min_char_length=int(min_chars),
             platform_targets=[p.strip() for p in platforms_str.split(",") if p.strip()],
+            industry=spec.industry,
         )
         st.session_state.spec = new_spec
         st.session_state.step = 3
@@ -1001,6 +1021,7 @@ def _render_results() -> None:
         provider=llm_cfg.get("provider", ""),
         model=llm_cfg.get("model", ""),
         prompt_version=PROMPT_VERSION,
+        industry=spec.industry,
     )
 
     dl_col, save_col = st.columns(2)
@@ -1013,7 +1034,8 @@ def _render_results() -> None:
         write_csv(filtered, out_path, run_id=run_id,
                   provider=llm_cfg.get("provider", ""),
                   model=llm_cfg.get("model", ""),
-                  prompt_version=PROMPT_VERSION)
+                  prompt_version=PROMPT_VERSION,
+                  industry=spec.industry)
         st.success(f"已保存到 {out_path}")
 
 

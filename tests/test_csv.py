@@ -19,9 +19,9 @@ def _make_comments(n: int = 3) -> list[GeneratedComment]:
             task_id=f"task-{i}",
             text=f"这是第{i+1}条测试评论，字数足够自然流畅",
             category_direction="正向",
-            theme="续航表现",
-            sub_theme="真实里程",
-            persona="普通车主",
+            theme="使用体验",
+            sub_theme="产品质量",
+            persona="真实用户",
             char_count=20,
             validation_status="pass",
             errors=[],
@@ -113,3 +113,20 @@ def test_csv_includes_validation_status():
     text = raw.decode("utf-8-sig")
     assert "soft_flag" in text
     assert "与其他评论相似" in text
+
+
+# ── Industry audit column ─────────────────────────────────────────
+
+def test_csv_includes_industry_column():
+    comments = _make_comments(1)
+    raw = to_csv_bytes(comments, industry="beauty")
+    text = raw.decode("utf-8-sig")
+    assert "industry" in text
+    assert "beauty" in text
+
+
+def test_csv_industry_defaults_to_general():
+    comments = _make_comments(1)
+    raw = to_csv_bytes(comments)
+    text = raw.decode("utf-8-sig")
+    assert "general" in text

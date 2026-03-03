@@ -8,6 +8,7 @@ from typing import Callable, Optional
 from src.llm.client import LLMClient
 from src.models import BriefSpec, CommentCategory, ParseReport
 from src.parsers.base import BaseParser, load_paragraphs
+from src.presets import get_preset, IndustryPreset
 
 # Callback type: on_step(field_name, result_summary)
 StepCallback = Callable[[str, str], None]
@@ -15,7 +16,7 @@ StepCallback = Callable[[str, str], None]
 TokenCallback = Callable[[Optional[str]], None]
 
 _SYSTEM = """\
-你是一名营销文档结构化提取专家，专门解析汽车品牌的评论运营 brief 文档。
+你是一名营销文档结构化提取专家，专门解析评论运营 brief 文档。
 只返回 JSON，不要有任何额外说明、注释或 markdown 代码块标记。
 """
 
@@ -26,7 +27,7 @@ _BASIC_PROMPT = """\
 
 {{
   "title": "文档标题",
-  "product_name": "产品名称（如：岚图梦想家、启境）",
+  "product_name": "产品名称（如：{product_example}）",
   "product_background": "产品背景与定位，100字以内",
   "general_rules": ["写作规则1", "写作规则2"],
   "forbidden_phrases": ["禁用词1", "禁用词2"],
@@ -39,6 +40,7 @@ _BASIC_PROMPT = """\
 - forbidden_phrases 提取所有禁止使用的词语、短语、广告用语
 - general_rules 提取通用写作要求、语气要求等
 - positive_ratio 根据文档中正向/反击/引导分类的数量比例估算（0~1）
+- 以上示例仅作格式参考，只提取文档中实际存在的信息，不要虚构文档中不存在的内容。
 
 === 文档内容 ===
 {document}
@@ -52,10 +54,10 @@ _CATEGORIES_PROMPT = """\
 [
   {{
     "direction": "正向",
-    "theme": "主题名称（如：续航表现、空间体验）",
+    "theme": "主题名称（如：{theme_example}）",
     "sub_themes": ["子主题1", "子主题2"],
     "description": "该分类的写作指导与角度说明",
-    "personas": ["人设1（如：宝妈、科技博主）", "人设2"],
+    "personas": ["人设1（如：{persona_example}）", "人设2"],
     "example_comments": ["示例评论原文（尽量保留文档原文）"]
   }}
 ]
@@ -65,6 +67,7 @@ _CATEGORIES_PROMPT = """\
 - 必须覆盖文档中所有评论分类，不要遗漏
 - example_comments 尽量保留原文，每条示例单独一个字符串
 - personas 提取文档中的账号人设、发帖身份描述
+- 以上示例仅作格式参考，只提取文档中实际存在的信息，不要虚构文档中不存在的内容。
 
 === 文档内容 ===
 {document}
@@ -81,10 +84,12 @@ class LLMParser(BaseParser):
         client: LLMClient,
         on_step: Optional[StepCallback] = None,
         on_token: Optional[TokenCallback] = None,
+        industry: str = "general",
     ) -> None:
         self._client = client
         self._on_step = on_step or (lambda field, result: None)
         self._on_token = on_token
+        self._preset: IndustryPreset = get_preset(industry)
 
     # BaseParser calls this
     def _parse(self, paragraphs: list[str]) -> tuple[Optional[BriefSpec], float, list[str]]:
@@ -128,6 +133,7 @@ class LLMParser(BaseParser):
             negative_ratio=round(1.0 - pos_ratio, 2),
             min_char_length=int(base.get("min_char_length", 20)),
             platform_targets=[str(p).strip() for p in base.get("platform_targets", []) if p],
+            industry=self._preset.key,
         )
 
         confidence = 0.7
@@ -156,13 +162,17 @@ class LLMParser(BaseParser):
         cb("禁用词", "…")
         cb("平台 / 比例", "…")
 
+        preset = self._preset
+        product_example = "、".join(preset.product_examples)
+        prompt = _BASIC_PROMPT.format(product_example=product_example, document=doc_text)
+
         if self._on_token:
             self._on_token(None)  # signal: clear stream buffer / new phase
         try:
             if self._on_token:
                 resp = self._client.stream_chat(
                     system=_SYSTEM,
-                    user=_BASIC_PROMPT.format(document=doc_text),
+                    user=prompt,
                     temperature=0.1,
                     on_chunk=self._on_token,
                     extra_options=extra_options,
@@ -170,7 +180,7 @@ class LLMParser(BaseParser):
             else:
                 resp = self._client.chat(
                     system=_SYSTEM,
-                    user=_BASIC_PROMPT.format(document=doc_text),
+                    user=prompt,
                     temperature=0.1,
                     extra_options=extra_options,
                 )
@@ -193,13 +203,22 @@ class LLMParser(BaseParser):
         cb = self._on_step
         cb("评论分类", "…")
 
+        preset = self._preset
+        theme_example = "、".join(preset.theme_examples)
+        persona_example = "、".join(preset.persona_examples)
+        prompt = _CATEGORIES_PROMPT.format(
+            theme_example=theme_example,
+            persona_example=persona_example,
+            document=doc_text,
+        )
+
         if self._on_token:
             self._on_token(None)  # signal: clear stream buffer / new phase
         try:
             if self._on_token:
                 resp = self._client.stream_chat(
                     system=_SYSTEM,
-                    user=_CATEGORIES_PROMPT.format(document=doc_text),
+                    user=prompt,
                     temperature=0.1,
                     on_chunk=self._on_token,
                     extra_options=extra_options,
@@ -207,7 +226,7 @@ class LLMParser(BaseParser):
             else:
                 resp = self._client.chat(
                     system=_SYSTEM,
-                    user=_CATEGORIES_PROMPT.format(document=doc_text),
+                    user=prompt,
                     temperature=0.1,
                     extra_options=extra_options,
                 )

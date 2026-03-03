@@ -1,4 +1,4 @@
-"""ParserA: 分类规则型 brief（如岚图梦想家）。
+"""ParserA: 分类规则型 brief（如分类规则型营销 brief）。
 
 特征：包含"正向-"/"反击-"分类标记、人设列表、产品数据块。
 """
@@ -17,13 +17,13 @@ _NEGATIVE_MARKERS = re.compile(r"反击|应对|回怼|负面|差评|防御")
 _GUIDE_MARKERS = re.compile(r"引导|转化|话题|舆论")
 _PERSONA_SECTION = re.compile(r"人设|身份|角色|账号")
 _FORBIDDEN_SECTION = re.compile(r"禁止|不得|禁用|避免|不要")
-_PRODUCT_SECTION = re.compile(r"产品.*?(背景|介绍|亮点|特点|数据)|车型.*?参数|配置|续航|动力")
+_PRODUCT_SECTION = re.compile(r"产品.*?(背景|介绍|亮点|特点|数据|参数|配置)")
 _RULE_SECTION = re.compile(r"总体.*?规则|写作.*?原则|通用.*?要求|注意.*?事项")
 _PLATFORM_SECTION = re.compile(r"平台|渠道|微博|小红书|抖音|B站|知乎")
 
 
 class ClassifiedParser(BaseParser):
-    """解析"分类规则型"brief（岚图梦想家格式）。"""
+    """解析"分类规则型"brief（分类规则型 brief）。"""
 
     name = "classified"
 
@@ -151,10 +151,10 @@ def _any_section(text: str) -> bool:
 
 
 def _extract_product_name(title: str, paragraphs: list[str]) -> str:
-    # 尝试从标题/前几行提取产品名（中文车型名通常2-8个汉字）
+    # 尝试从标题/前几行提取产品名（中文产品名通常2-8个汉字）
     candidates = [title] + paragraphs[:5]
     for c in candidates:
-        m = re.search(r"[\u4e00-\u9fa5]{2,8}(?:汽车|新能源|电动)?[\u4e00-\u9fa5]{0,4}", c)
+        m = re.search(r"[\u4e00-\u9fa5]{2,8}[\u4e00-\u9fa5]{0,4}", c)
         if m:
             return m.group()
     return ""

@@ -1,18 +1,23 @@
 """System prompt templates."""
 from __future__ import annotations
 
+from typing import Optional
+
 from src.models import BriefSpec
+from src.presets import IndustryPreset, get_preset
 
 
 PROMPT_VERSION = "v1.0"
 
 
-def build_system_prompt(spec: BriefSpec) -> str:
+def build_system_prompt(spec: BriefSpec, preset: Optional[IndustryPreset] = None) -> str:
+    if preset is None:
+        preset = get_preset(spec.industry)
     rules_text = "\n".join(f"- {r}" for r in spec.general_rules) if spec.general_rules else "- 自然流畅，贴近真实用户语气"
     forbidden_text = "、".join(spec.forbidden_phrases[:20]) if spec.forbidden_phrases else "无"
     platforms = "、".join(spec.platform_targets) if spec.platform_targets else "通用平台"
 
-    return f"""你是一名专业的社交媒体运营人员，负责为汽车品牌「{spec.product_name}」生成真实感强的用户评论。
+    return f"""你是一名专业的社交媒体运营人员，负责为{preset.role_desc}「{spec.product_name}」生成真实感强的用户评论。
 
 【产品背景】
 {spec.product_background[:300] or "（未提供）"}
