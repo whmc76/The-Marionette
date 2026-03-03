@@ -55,6 +55,8 @@ class LLMClient:
                     resp = self._backend.chat(system, user, temperature, self._timeout, extra_options)
                 self._record(success=True)
                 return resp
+            except (TimeoutError, GenerationAborted):
+                raise  # never retry timeouts or aborts
             except Exception as exc:
                 last_exc = exc
                 self._record(success=False)
@@ -85,6 +87,8 @@ class LLMClient:
                     )
                 self._record(success=True)
                 return resp
+            except (TimeoutError, GenerationAborted):
+                raise  # never retry timeouts or aborts
             except Exception as exc:
                 last_exc = exc
                 self._record(success=False)
@@ -176,19 +180,14 @@ def build_client(
         from src.llm.anthropic_backend import AnthropicBackend
         backend: BaseLLMBackend = AnthropicBackend(api_key=api_key, model=model)
     elif provider == "ollama":
-        from src.llm.openai_backend import OpenAIBackend
-        # Ollama OpenAI-compatible endpoint requires /v1 suffix
-        ollama_url = base_url.rstrip("/")
-        if not ollama_url.endswith("/v1"):
-            ollama_url += "/v1"
-        backend = OpenAIBackend(
-            api_key="ollama",
-            base_url=ollama_url,
+        from src.llm.ollama_backend import OllamaBackend
+        # Use native /api/chat endpoint — respects think=False for GLM and similar models
+        backend = OllamaBackend(
+            base_url=base_url,
             model=model,
-            is_ollama=True,
             ollama_options=ollama_options,
         )
-        timeout = max(timeout, 120.0)
+        timeout = max(timeout, 600.0)
         max_concurrency = min(max_concurrency, 2)
     else:  # openai / compatible
         from src.llm.openai_backend import OpenAIBackend

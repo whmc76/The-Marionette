@@ -104,7 +104,7 @@ class LLMParser(BaseParser):
             warnings.append("文档超长（>260000字），已截取前260000字符。如解析不完整请精简文档。")
 
         required_ctx = _required_ctx(doc_text)
-        _extra = {"num_ctx": required_ctx}
+        _extra = {"num_ctx": required_ctx, "think": False}
         ctx_label = f"动态扩展 → {required_ctx:,}" if required_ctx > 8192 else str(required_ctx)
         self._on_step("上下文窗口", f"{ctx_label} tokens（文档 {len(doc_text):,} 字）")
 
@@ -119,8 +119,16 @@ class LLMParser(BaseParser):
 
         # Merge into BriefSpec
         base = basic or {}
-        pos_ratio = float(base.get("positive_ratio", 0.5))
+        try:
+            pos_ratio = float(base.get("positive_ratio") or 0.5)
+        except (ValueError, TypeError):
+            pos_ratio = 0.5
         pos_ratio = max(0.0, min(1.0, pos_ratio))
+
+        try:
+            min_char_length = int(base.get("min_char_length") or 20)
+        except (ValueError, TypeError):
+            min_char_length = 20
 
         spec = BriefSpec(
             title=str(base.get("title", "")).strip(),
@@ -131,7 +139,7 @@ class LLMParser(BaseParser):
             categories=categories,
             positive_ratio=pos_ratio,
             negative_ratio=round(1.0 - pos_ratio, 2),
-            min_char_length=int(base.get("min_char_length", 20)),
+            min_char_length=min_char_length,
             platform_targets=[str(p).strip() for p in base.get("platform_targets", []) if p],
             industry=self._preset.key,
         )

@@ -45,7 +45,7 @@ def _restore_client(llm: LLMSettings) -> None:
             max_concurrency=llm.max_concurrency,
             max_retries=llm.max_retries,
             failure_threshold=llm.failure_threshold,
-            timeout=120.0 if llm.provider == "ollama" else 30.0,
+            timeout=600.0 if llm.provider == "ollama" else 30.0,
             ollama_options=ollama_opts,
         )
         st.session_state.llm_client = client
