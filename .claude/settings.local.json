@@ -5,7 +5,8 @@
       "Bash(python:*)",
       "Bash(dir E:\\\\WorkSpace\\\\The-Marionette\\\\assets:*)",
       "Bash(pip install:*)",
-      "Bash(uv:*)"
+      "Bash(uv:*)",
+      "Skill(keybindings-help)"
     ]
   }
 }
